@@ -1,0 +1,25 @@
+{
+  "name": "winbot-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kronos1997/winbot-test.git"
+  },
+  "author": "Nicolas",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kronos1997/winbot-test/issues"
+  },
+  "homepage": "https://github.com/kronos1997/winbot-test#readme",
+  "dependencies": {
+    "botbuilder": "^0.9.2",
+    "botkit": "^0.1.1",
+    "restify": "^4.0.4"
+  }
+}
