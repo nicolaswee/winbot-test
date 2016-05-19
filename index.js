@@ -2,9 +2,11 @@ var Botkit = require('botkit');
 var builder = require('botbuilder');
 
 var openWeatherApiKey = "997684052093606682f0251a37e1d126";
+var BingNewsApiKey = "2d98f7ca8d8d4f36937a7bae85d0ac66";
+var BingSearchApiKey = "2d98f7ca8d8d4f36937a7bae85d0ac66";
 var controller = Botkit.slackbot();
 var bot = controller.spawn({
-   token: "xoxb-41185367776-EBhJdJnL1rcMJiTlEyamFGOa"
+    token: "xoxb-41185367776-N8rFrIeciJatvO09rsqAM7Jd"
 });
 
 var slackBot = new builder.SlackBot(controller, bot);
@@ -42,37 +44,122 @@ slackBot.add('/', dialog)
 
 var weather = require('./weather')(openWeatherApiKey)
 
-dialog.on('weather', [
-    function (session, args, next){
+dialog.setThreshold(0.5).on('weather', [
+    function (session, args, next) {
         var countryObj = builder.EntityRecognizer.findEntity(args.entities, 'country')
-        country = countryObj.entity
-        if(!country){
+        if (!countryObj) {
             builder.Prompts.text(session, 'I\'d love to give you the weather but for where?')
-        }else{
-            next({response: country })
+        } else {
+            next({response: countryObj.entity})
         }
     },
-    function (session, results){
+    function (session, results) {
         country = results.response
-        //console.log(country);
-        weather.get(country, function(error, msg){
-                    if(error){
-                        console.error(error)
-                        session.send("uh oh, there was a problem getting the weather")
-                    }
-                    session.send(msg)
-                })
+        console.log(country);
+        weather.get(country, function (error, msg) {
+            if (error) {
+                console.error(error)
+                session.send("uh oh, there was a problem getting the weather")
+            }
+            session.send(msg)
+        })
     }
 ])
 
-dialog.onDefault(builder.DialogAction.send("I'm sorry I didn't understand. I only tell the weather."))
+var news = require('./news')(BingNewsApiKey)
 
-slackBot.listenForMentions();
+dialog.on('newsTopic', [
+    function (session, args, next) {
+        var topicObj = builder.EntityRecognizer.findEntity(args.entities, 'newstopic')
+//        topic = topicObj.entity
+//        var dateObj = builder.EntityRecognizer.findEntity(args.entities, 'newsdate::today')
+//        date = dateObj.entity
+//        console.log(topic + "1")
+//        console.log(date)
+        if (!topicObj) {
+            builder.Prompts.text(session, 'I\'d love to give you the news but on what topic? (Rephase the sentence)')
+        } else {
+            next({response: topicObj.entity})
+        }
+//        if(!date){
+//            builder.Prompts.text(session, 'I\'d love to give you the weather but for where?')
+//        }else{
+//            next({responsedate: date })
+//        }
+    },
+    function (session, results) {
+//        date = results.responsedate
+        //console.log(topic + "2");
+        console.log(results.response + "2");
+        topic = results.response
+        news.get(topic, function (error, data) {
+            if (error) {
+                console.error(error)
+                session.beginDialog("uh oh, there was a problem getting the news")
+            }
+            var finaldata = JSON.parse(data);
+            //console.log(finaldata + "6");
+            //console.log(finaldata.value.length + "7");
+            session.send("Here are the top 3 stories on " + results.response)
+            for (i = 0; i < 3; i++) {
+                var msg = finaldata.value[i].name;
+                var link = finaldata.value[i].url;
+                session.send("<" + link + "|" + msg + ">")
+            }
+            //session.send("<"+link+"|"+msg+">")
+        })
+    }
+])
 
-bot.startRTM(function(err,bot,payload) {
-  if (err) {
-    throw new Error('Could not connect to Slack');
-  }else{
-      console.log('Connected to slack');
-  }
+var search = require('./search')(BingSearchApiKey)
+
+dialog.on('searchNow', [
+    function (session, args, next) {
+        var searchObj = builder.EntityRecognizer.findEntity(args.entities, 'searchTopic')
+        if (!searchObj) {
+            builder.Prompts.text(session, 'I\'d love to search now but for what topic? (Rephase the sentence)')
+        } else {
+            console.log(searchObj.entity)
+            next({response: searchObj.entity})
+        }
+    },
+    function (session, results) {
+        console.log(results.response + "2");
+        searchnow = results.response
+        console.log(searchnow);
+        search.get(searchnow, function (error, data) {
+            if (error) {
+                console.error(error)
+                session.beginDialog("uh oh, there was a problem conducting the search")
+            }
+            var finaldata = JSON.parse(data);
+            console.log(finaldata + "6");
+            session.send("Here are the top 3 searches on " + results.response)
+            for (i = 0; i < 3; i++) {
+                var msg = finaldata.webPages.value[i].name;
+                var link = finaldata.webPages.value[i].url;
+                console.log(msg + "6");
+                session.send("<" + link + "|" + msg + ">")
+            }
+        })
+    }
+])
+
+//dialog.on('none', [
+//    function (session) {
+//         session.send("Hi what do you want to know?")
+//    }
+//])
+
+//dialog.onDefault(builder.DialogAction.send("Hi, what do you want to know? I can tell the weather, news and search for stuff."))
+
+slackBot.listen(['ambient', 'direct_mention', 'mention', 'direct_message']);
+//slackBot.listenForMentions();
+
+bot.startRTM(function (err, bot, payload) {
+    if (err) {
+        throw new Error('Could not connect to Slack');
+    } else {
+        console.log('Connected to slack');
+    }
 });
